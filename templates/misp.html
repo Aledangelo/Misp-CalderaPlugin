@@ -1,36 +1,87 @@
-<div id="abilities-new-section" class="section-profile">
-    <div class="row">
-        <!-- <div class="topleft duk-icon"><img onclick="removeSection('abilities-new-section')" src="/gui/img/x.png"></div> -->
-        <div class="column section-border" style="flex:25%;text-align:left;padding:15px;">
-            <h1 style="font-size:70px;margin-top:-20px;">Misp</h1>
-        </div>
-        <div class="column" style="flex:75%;padding:15px;text-align: left">
-            <div>
-                <h1> {{ name }} </h1>
+<link rel="stylesheet" href="/misp/css/misp.css">
+<script src="/misp/js/misp.js"></script>
 
-                <input id="event_id" name="event_id" type="number" placeholder="Misp Event ID" />
-                <input id="misp_base_url" name="misp_base_url" type="text" placeholder="Misp Base Url" />
-                <input id="misp_api_key" name="misp_api_key" type="password" placeholder="misp_api_key" />
-                <input id="loader" name="loader" type="button" value="Start" onclick="execute()" />
-            </div>
-        </div>
+<div x-data="alpineMisp()" x-init="initPage()">
+    <div>
+        <h2 x-text="name"></h2>
+        <p x-text="description"></p>
+    </div>
+    <hr>
+    <div>
+        <input id="event_id" name="event_id" type="number" placeholder="Misp Event ID" />
+        <input id="misp_base_url" name="misp_base_url" type="text" placeholder="Misp Base Url" />
+        <input id="misp_api_key" name="misp_api_key" type="password" placeholder="Misp Api Key" />
+        <select id="platform" name="platform">
+            <option value="">-- Select Platform --</option>
+            <option value="windows">Windows</option>
+            <option value="darwin">Darwin</option>
+            <option value="linux">Linux</option>
+            <option value="unknown">Others</option>
+        </select>
+        <button class="button is-primary is-small" @click="startFunction()">Start</button>
+
+        <button class="button is-primary is-small" @click="sampleFunction()">Click Me</button>
+        <p x-text="sampleVariable"></p>
     </div>
 </div>
 
 <script>
-    function execute() {
-                let requestBody = {
-                    event_id: document.getElementById('event_id').value,
-                    misp_base_url: document.getElementById('misp_base_url').value,
-                    misp_api_key: document.getElementById('misp_api_key').value
-                };
+/*
+  Templates in CALDERA are now enhanced with Alpine.js! It's essentially
+  a replacement for jQuery that has similar features to Vue and React.
+  Read up on the docs before you get started working on the UI: https://alpinejs.dev/
+*/
 
-                console.log(requestBody)
+function alpineMisp() {
+    return {
+        name: '{{ name }}',
+        description: '{{ description }}',
+        event_id: 0,
+        misp_base_url: '',
+        misp_api_key: '',
+        platform: '',
+        sampleVariable: '',
 
-                /*
-                apiV2('POST', '/plugin/misp/start', requestBody).catch((error) => {
-                    console.error(error)
-                })
-                */
-            }
+        initPage() {
+            // Sample API request
+            apiV2('GET', '/api/v2/health').then((response) => {
+                console.log('Woohoo, this page can talk to the API!');
+            }).catch((error) => {
+                // Call toast from anywhere within CALDERA to notify users of events
+                // toast(message, isSuccess)
+                toast('Error loading page', false);
+                console.error(error);
+            });
+        },
+
+        sampleFunction() {
+            this.sampleVariable = 'You clicked the button!';
+        },
+
+        startFunction() {
+            this.event_id = document.getElementById('event_id').value;
+            this.misp_base_url = document.getElementById('misp_base_url').value;
+            this.misp_api_key = document.getElementById('misp_api_key').value;
+            this.platform = document.getElementById('platform').value;
+
+            let requestBody = {
+                event: this.event_id,
+                base_url: this.misp_base_url,
+                api_key: this.misp_api_key,
+                platform: this.platform
+            };
+
+            console.log(requestBody)
+
+            apiV2('POST', '', requestBody).then((response) => {
+                console.log(response);
+            }).catch((error) => {
+                toast('Error loading page', false);
+                console.error(error);
+            })
+        }
+    };
+}
+
+// # sourceURL=misp.js
 </script>
