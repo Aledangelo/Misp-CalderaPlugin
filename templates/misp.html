@@ -20,8 +20,8 @@
         </select>
         <button class="button is-primary is-small" @click="startFunction()">Start</button>
 
-        <button class="button is-primary is-small" @click="sampleFunction()">Click Me</button>
-        <p x-text="sampleVariable"></p>
+        <!--<button class="button is-primary is-small" @click="sampleFunction()">Click Me</button>
+        <p x-text="sampleVariable"></p>-->
     </div>
 </div>
 
@@ -73,7 +73,7 @@ function alpineMisp() {
 
             console.log(requestBody)
 
-            apiV2('POST', '', requestBody).then((response) => {
+            apiV2('POST', '/plugin/misp/start', requestBody).then((response) => {
                 console.log(response);
             }).catch((error) => {
                 toast('Error loading page', false);

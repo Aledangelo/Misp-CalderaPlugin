@@ -20,7 +20,8 @@ class MispService:
         return 'bar'
 
     # Add functions here that call core services
-    def removeBlankSpace(string):
+    def removeBlankSpace(self, string):
+        self.log.info("AAAAAAAAAAAAAAAAAAAAAA: " + string)
         return string.replace(" ", "")
 
     async def search_event(self, event_id, misp_base_url, misp_api_key):
@@ -34,6 +35,8 @@ class MispService:
     async def save_operation(self, op_name, adv_name, adv_description, abilities):
         adversary = Adversary(name=adv_name, description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
+
+        self.log.info("AAAAAAAAAAAAAAA: " + str(adversary))
 
         operation = Operation(adversary=adversary, name=op_name)
         await self.data_svc.store(operation)
@@ -107,8 +110,8 @@ class MispService:
                         try:
                             t_id = self.removeBlankSpace(actual_value[i])
                         except Exception as e:
-                            print(f"Invalid ID: {e}")
-                            quit(1)
+                            self.log.error(e)
+                            return
                         if re.search("^T[1234567890]+\.*[1234567890]*", t_id):
                             break
                         i += 1
