@@ -1,7 +1,6 @@
 import logging
 import json
 import re
-import yaml
 import os
 from pymisp import PyMISP
 from app.objects.c_adversary import Adversary
