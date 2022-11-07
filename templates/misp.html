@@ -8,7 +8,7 @@
     </div>
     <hr>
     <div>
-        <label for="event_id">Insert Misp Event's:</label><br>
+        <label for="event_id">Insert Misp Event's ID:</label><br>
         <input id="event_id" name="event_id" type="number" placeholder="Misp Event ID" /><br>
         <label for="misp_base_url">Insert Misp Base Url:</label><br>
         <input id="misp_base_url" name="misp_base_url" type="text" placeholder="Misp Base Url" /><br>
@@ -22,19 +22,19 @@
             <option value="linux">Linux</option>
             <option value="unknown">Others</option>
         </select><br>
-        <button class="button is-primary is-small" @click="startFunction()">Start</button>
+        <br>
+        <button class="button is-primary is-small" @click="startFunction()">Start</button><br>
 
-        <!--<button class="button is-primary is-small" @click="sampleFunction()">Click Me</button>
-        <p x-text="sampleVariable"></p>-->
+        <br>
+        <h3>Results: </h3><br>
+        <p id="operation_id"></p>
+        <p id="operation_name"></p>
+        <p id="adversary_id"></p>
+        <p id="adversary_name"></p>
     </div>
 </div>
 
 <script>
-/*
-  Templates in CALDERA are now enhanced with Alpine.js! It's essentially
-  a replacement for jQuery that has similar features to Vue and React.
-  Read up on the docs before you get started working on the UI: https://alpinejs.dev/
-*/
 
 function alpineMisp() {
     return {
@@ -47,12 +47,9 @@ function alpineMisp() {
         sampleVariable: '',
 
         initPage() {
-            // Sample API request
             apiV2('GET', '/api/v2/health').then((response) => {
-                console.log('Woohoo, this page can talk to the API!');
+                console.log('It Works!');
             }).catch((error) => {
-                // Call toast from anywhere within CALDERA to notify users of events
-                // toast(message, isSuccess)
                 toast('Error loading page', false);
                 console.error(error);
             });
@@ -65,7 +62,7 @@ function alpineMisp() {
         startFunction() {
             this.event_id = document.getElementById('event_id').value;
             this.misp_base_url = document.getElementById('misp_base_url').value;
-            this.misp_api_key = document.getElementById('misp_api_key').value;
+            this.misp_api_key = documrednt.getElementById('misp_api_key').value;
             this.platform = document.getElementById('platform').value;
 
             let requestBody = {
@@ -79,6 +76,10 @@ function alpineMisp() {
 
             apiV2('POST', '/plugin/misp/start', requestBody).then((response) => {
                 console.log(response);
+                document.getElementById("operation_id").innerHTML = "Operation ID: " + response['id'];
+                document.getElementById("operation_name").innerHTML = "Operation Name: " + response['name'];
+                document.getElementById("adversary_id").innerHTML = "Adversary ID: " + response['adversary']['adversary_id'];
+                document.getElementById("adversary_name").innerHTML = "Adversary Name: " + response['adversary']['name']
             }).catch((error) => {
                 toast('Error loading page', false);
                 console.error(error);

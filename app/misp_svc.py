@@ -42,6 +42,7 @@ class MispService:
 
         operation = Operation(adversary=adversary.display, name=op_name)
         await self.data_svc.store(operation)
+        return operation
 
     def checkPlatform(self, ability, platform):
         for executor in ability["executors"]:
