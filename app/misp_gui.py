@@ -25,7 +25,7 @@ class MispGUI(BaseWorld):
     # Add functions here that the front-end will use
     async def start(self, request):
         data = await request.json()
-        self.log.info("AAAAAAAAAAAAAA: " + str(data))
+        self.log.info("[Misp Plugin] Starting...")
         event = await self.misp_svc.search_event(event_id=data['event'], misp_base_url=data['base_url'], misp_api_key=data['api_key'])
         abilities = await self.misp_svc.load_abilities()
         my_abilities = await self.misp_svc.analyze_galaxies(event=event, platform=data['platform'], abilities=abilities)

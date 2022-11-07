@@ -1,0 +1,70 @@
+{
+    "build-capabilities": "Load Metasploit Abilities",
+    "collection": [
+        "Automated Collection Command Prompt",
+        "Automated Collection",
+        "Automated Collection PowerShell",
+        "Automated Collection (T1119) - Input Capture (T1417)",
+        "Screen Capture"
+    ],
+    "command-and-control": [
+        "Ragdoll",
+        "Manx",
+        "Sandcat",
+        "Sandworm Download Keylogger"
+    ],
+    "credential-access": [
+        "Find private keys",
+        "LaZagne - Credentials from Browser",
+        "OS Credential Dumping",
+        "Password Cracking with Hashcat"
+    ],
+    "credential-dumping": "Read Dumped Credentials",
+    "defense-evasion": [
+        "1-min sleep",
+        "Avoid logs",
+        "Check Security Services",
+        "Artifact Cleanup - Delete Files"
+    ],
+    "discovery": [
+        "Check Chrome",
+        "Check Go",
+        "Check Python",
+        "Current User",
+        "Enumerate"
+    ],
+    "discovery/execution": "Enumerate",
+    "execution": [
+        "PowerShell",
+        "PowerShell Session Creation and Use",
+        "Remote System Discovery (T1018)",
+        "PowerShell Command Execution"
+    ],
+    "exfiltration": [
+        "Compress staged directory",
+        "Exfil staged directory",
+        "Exfil Directory Files to GitHub"
+    ],
+    "impact": [
+        "Leave note",
+        "Logoff System - Windows"
+    ],
+    "initial-access": [
+        "Octopus Scanner Malware Open Source Supply Chain",
+        "RDP Connection to Initial Target (Dorothy)"
+    ],
+    "lateral-movement": [
+        "Start Agent (WinRM)",
+        "Copy Ransomware"
+    ],
+    "persistence": [
+        "Persistent Service 1",
+        "Persistent Service 2",
+        "Registry Run Keys"
+    ],
+    "privilege-escalation": [
+        "Privilege Escalation",
+        "Process Injection",
+        "wow64log DLL Hijack"
+    ]
+}

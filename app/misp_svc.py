@@ -20,12 +20,15 @@ class MispService:
         return 'bar'
 
     # Add functions here that call core services
-    def removeBlankSpace(self, string):
-        self.log.info("AAAAAAAAAAAAAAAAAAAAAA: " + string)
+    '''
+    async def removeBlankSpace(self, string):
+        self.log.info(string)
         return string.replace(" ", "")
+    '''
 
     async def search_event(self, event_id, misp_base_url, misp_api_key):
         misp = PyMISP(misp_base_url, misp_api_key, False)
+        self.log.info("[Misp Plugin] Get event from MISP")
         return misp.get_event(event_id)
 
     async def load_abilities(self):
@@ -33,15 +36,14 @@ class MispService:
         return abilities
 
     async def save_operation(self, op_name, adv_name, adv_description, abilities):
+        self.log.info("[Misp Plugin] Saving Adversary Profile...")
         adversary = Adversary(name=adv_name, description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
 
-        self.log.info("AAAAAAAAAAAAAAA: " + str(adversary))
-
-        operation = Operation(adversary=adversary, name=op_name)
+        operation = Operation(adversary=adversary.display, name=op_name)
         await self.data_svc.store(operation)
 
-    def checkPlatform(ability, platform):
+    def checkPlatform(self, ability, platform):
         for executor in ability["executors"]:
             if str(executor["platform"]) == str(platform):
                 return True
@@ -49,7 +51,7 @@ class MispService:
         return False    
 
     def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default):
-        def_ab = open("conf/default_abilities.json", "r")
+        def_ab = open("plugins/misp/conf/default_abilities.json", "r")
         default_abilities = json.load(def_ab)
 
         multi = False
@@ -58,7 +60,8 @@ class MispService:
 
         gFind = False
         for tactic in tactics:
-            for ability in abilities:
+            for ab in abilities:
+                ability = ab.display
                 if str(ability["technique_id"]) == str(technique_id):
                     if str(ability["tactic"]) == str(tactic):
                         if self.checkPlatform(ability=ability, platform=platform):
@@ -67,7 +70,8 @@ class MispService:
                             break
 
         if not gFind and multi:
-            for ability in abilities:
+            for ab in abilities:
+                ability = ab.display
                 if str(ability["technique_id"]) == str(technique_id):
                     if str(ability["tactic"]) == str(tactic) or str(ability["tactic"]) == "multiple":
                         if self.checkPlatform(ability=ability, platform=platform):
@@ -76,13 +80,13 @@ class MispService:
                             break
 
         if not gFind:
-            print(f"[WARNING] Missing ability for ID: {technique_id}")
             added = False
             for tactic in tactics:
                 if str(tactic) in added_default:
                     break
                 for default in default_abilities[str(tactic)]:
-                    for ability in abilities:
+                    for ab in abilities:
+                        ability = ab.display
                         if str(ability["name"]) == default:
                             if self.checkPlatform(ability=ability, platform=platform):
                                 my_abilities.append(ability)
@@ -108,7 +112,7 @@ class MispService:
                     i = 1
                     while True:
                         try:
-                            t_id = self.removeBlankSpace(actual_value[i])
+                            t_id = str(actual_value[i]).replace(" ", "")
                         except Exception as e:
                             self.log.error(e)
                             return
@@ -120,16 +124,16 @@ class MispService:
                     kill_chain = cluster["meta"]["kill_chain"]
                     for k_chain in kill_chain:
                         k = str(k_chain).split(":")
-                        tactics.append(self.removeBlankSpace(k[1]))
-
+                        tactics.append(str(k[1]).replace(" ", ""))
+                    
                     my_abilities, added_default = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default)
                 break
 
         ordered_abilities = []
         kill_chain_order = ["reconnaissance", "resource-development", "initial-access", "execution", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "discovery", "lateral-movement", "cllection", "command-and-control", "exfiltration", "impact"]
         for tactic in kill_chain_order:
-            for ab in my_abilities:
-                if str(ab["tactic"]) == str(tactic):
-                    ordered_abilities.append(ab["ability_id"])          
+            for a in my_abilities:
+                if str(a["tactic"]) == str(tactic):
+                    ordered_abilities.append(a["ability_id"])          
 
         return ordered_abilities
