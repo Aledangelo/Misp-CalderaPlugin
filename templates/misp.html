@@ -8,16 +8,20 @@
     </div>
     <hr>
     <div>
-        <input id="event_id" name="event_id" type="number" placeholder="Misp Event ID" />
-        <input id="misp_base_url" name="misp_base_url" type="text" placeholder="Misp Base Url" />
-        <input id="misp_api_key" name="misp_api_key" type="password" placeholder="Misp Api Key" />
+        <label for="event_id">Insert Misp Event's:</label><br>
+        <input id="event_id" name="event_id" type="number" placeholder="Misp Event ID" /><br>
+        <label for="misp_base_url">Insert Misp Base Url:</label><br>
+        <input id="misp_base_url" name="misp_base_url" type="text" placeholder="Misp Base Url" /><br>
+        <label for="misp_api_key">Insert Misp Api Key:</label><br>
+        <input id="misp_api_key" name="misp_api_key" type="password" placeholder="Misp Api Key" /><br>
+        <label for="platform">Choose the platform on which to attack:</label>
         <select id="platform" name="platform">
             <option value="">-- Select Platform --</option>
             <option value="windows">Windows</option>
             <option value="darwin">Darwin</option>
             <option value="linux">Linux</option>
             <option value="unknown">Others</option>
-        </select>
+        </select><br>
         <button class="button is-primary is-small" @click="startFunction()">Start</button>
 
         <!--<button class="button is-primary is-small" @click="sampleFunction()">Click Me</button>
