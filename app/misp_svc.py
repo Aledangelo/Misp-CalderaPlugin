@@ -1,6 +1,7 @@
 import logging
 import json
 import re
+import yaml
 import os
 from pymisp import PyMISP
 from app.objects.c_adversary import Adversary
@@ -17,13 +18,6 @@ class MispService:
 
     async def foo(self):
         return 'bar'
-
-    # Add functions here that call core services
-    '''
-    async def removeBlankSpace(self, string):
-        self.log.info(string)
-        return string.replace(" ", "")
-    '''
 
     async def search_event(self, event_id, misp_base_url, misp_api_key):
         misp = PyMISP(misp_base_url, misp_api_key, False)

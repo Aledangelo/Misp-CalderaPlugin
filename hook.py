@@ -13,9 +13,9 @@ async def enable(services):
     misp_gui = MispGUI(services, name=name, description=description)
     app.router.add_static('/misp', 'plugins/misp/static/', append_version=True)
     app.router.add_route('GET', '/plugin/misp/gui', misp_gui.splash)
+    app.router.add_route('POST', '/plugin/misp/start', misp_gui.start)
 
     misp_api = MispAPI(services)
-    # Add API routes here
     app.router.add_route('POST', '/plugin/misp/mirror', misp_api.mirror)
-    app.router.add_route('POST', '/plugin/misp/start', misp_gui.start)
+    
 

@@ -22,7 +22,6 @@ class MispGUI(BaseWorld):
     async def splash(self, request):
         return dict(name=self.name, description=self.description)
 
-    # Add functions here that the front-end will use
     async def start(self, request):
         data = await request.json()
         self.log.info("[Misp Plugin] Starting...")
