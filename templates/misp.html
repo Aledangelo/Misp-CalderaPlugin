@@ -26,7 +26,7 @@
         <button class="button is-primary is-small" @click="startFunction()">Start</button><br>
 
         <br>
-        <h3>Results: </h3><br>
+        <h3 id="res"></h3><br>
         <p id="operation_id"></p>
         <p id="operation_name"></p>
         <p id="adversary_id"></p>
@@ -44,7 +44,6 @@ function alpineMisp() {
         misp_base_url: '',
         misp_api_key: '',
         platform: '',
-        sampleVariable: '',
 
         initPage() {
             apiV2('GET', '/api/v2/health').then((response) => {
@@ -55,14 +54,10 @@ function alpineMisp() {
             });
         },
 
-        sampleFunction() {
-            this.sampleVariable = 'You clicked the button!';
-        },
-
         startFunction() {
             this.event_id = document.getElementById('event_id').value;
             this.misp_base_url = document.getElementById('misp_base_url').value;
-            this.misp_api_key = documrednt.getElementById('misp_api_key').value;
+            this.misp_api_key = document.getElementById('misp_api_key').value;
             this.platform = document.getElementById('platform').value;
 
             let requestBody = {
@@ -73,9 +68,11 @@ function alpineMisp() {
             };
 
             console.log(requestBody)
+            document.getElementById("res").innerHTML = "Waiting for response..."
 
             apiV2('POST', '/plugin/misp/start', requestBody).then((response) => {
                 console.log(response);
+                document.getElementById("res").innerHTML = "Result: "
                 document.getElementById("operation_id").innerHTML = "Operation ID: " + response['id'];
                 document.getElementById("operation_name").innerHTML = "Operation Name: " + response['name'];
                 document.getElementById("adversary_id").innerHTML = "Adversary ID: " + response['adversary']['adversary_id'];
