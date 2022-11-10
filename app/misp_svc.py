@@ -67,11 +67,25 @@ class MispService:
             for ab in abilities:
                 ability = ab.display
                 if str(ability["technique_id"]) == str(technique_id):
-                    if str(ability["tactic"]) == str(tactic) or str(ability["tactic"]) == "multiple":
+                    if str(ability["tactic"]) == "multiple":
                         if self.checkPlatform(ability=ability, platform=platform):
                             my_abilities.append(ability)
                             gFind = True
                             break
+
+        if not gFind and '.' in str(technique_id):
+            temp = str(technique_id).split(".")
+            new_id = temp[0]
+            for tactic in tactics:
+                for ab in abilities:
+                    ability = ab.display
+                    if str(ability["technique_id"]) == new_id:
+                        if str(ability["tactic"]) == str(tactic):
+                            if self.checkPlatform(ability=ability, platform=platform):
+                                my_abilities.append(ability)
+                                gFind = True
+                                break
+
 
         if not gFind:
             added = False
