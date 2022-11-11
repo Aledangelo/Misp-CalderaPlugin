@@ -1,7 +1,6 @@
 import logging
 import json
 import re
-import yaml
 import os
 from pymisp import PyMISP
 from app.objects.c_adversary import Adversary
@@ -105,8 +104,39 @@ class MispService:
 
         return my_abilities, added_default
 
+    def order_ability(self, attributes):
+        ordered = []
+        for attribute in attributes:
+            try:
+                if len(attribute['Tag']) > 0:
+                    for tag in attribute['Tag']:
+                        if "attack-flow" in tag['name']:
+                            temp = str(tag['name']).split(":")
+                            n = temp[1]
+                            for galaxy in attribute['Galaxy']:
+                                for cluster in galaxy['GalaxyCluster']:
+                                    if cluster['type'] == "mitre-attack-pattern":
+                                        v = str(cluster['value']).split("-")
+                                        i = 1
+                                        while True:
+                                            try:
+                                                t_id = str(v[i]).replace(" ", "")
+                                            except Exception as e:
+                                                quit(1)
+                                            if re.search("^T[1234567890]+\.*[1234567890]*", t_id):
+                                                break
+                                            i += 1
+                                        ordered.append((int(n), t_id))
+            except Exception:
+                pass
+
+        ordered.sort()
+        return ordered
+
     async def analyze_galaxies(self, event, platform, abilities):
         galaxy = event["Event"]["Galaxy"]
+        ordered = self.order_ability(event['Event']['Attribute'])
+        self.log.info(ordered)
 
         my_abilities = []
         added_default = []
@@ -138,10 +168,14 @@ class MispService:
                 break
 
         ordered_abilities = []
-        kill_chain_order = ["reconnaissance", "resource-development", "initial-access", "execution", "persistence", "privilege-escalation", "defense-evasion", "credential-access", "discovery", "lateral-movement", "cllection", "command-and-control", "exfiltration", "impact"]
-        for tactic in kill_chain_order:
+        for o in ordered:
             for a in my_abilities:
-                if str(a["tactic"]) == str(tactic):
-                    ordered_abilities.append(a["ability_id"])          
+                if str(a['technique_id']) in str(o[1]):
+                    ordered_abilities.append(a["ability_id"])
+                    my_abilities.remove(a)
+
+        if len(my_abilities) > 0:
+            for a in my_abilities:
+                ordered_abilities.append(a["ability_id"])
 
         return ordered_abilities
