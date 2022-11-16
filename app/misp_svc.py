@@ -5,6 +5,8 @@ import os
 from pymisp import PyMISP
 from app.objects.c_adversary import Adversary
 from app.objects.c_operation import Operation
+from app.objects.secondclass.c_fact import Fact
+from app.objects.c_source import Source
 
 class MispService:
     def __init__(self, services):
@@ -27,12 +29,18 @@ class MispService:
         abilities = await self.services.get('data_svc').locate('abilities')
         return abilities
 
-    async def save_operation(self, op_name, adv_name, adv_description, abilities):
+    
+
+    async def save_operation(self, event, adv_description, abilities):
         self.log.info("[Misp Plugin] Saving Adversary Profile...")
-        adversary = Adversary(name=adv_name, description=adv_description, atomic_ordering=abilities)
+        adversary = Adversary(name=event['Event']['info'] + "_Adv", description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
 
-        operation = Operation(adversary=adversary.display, name=op_name)
+        facts = self.get_facts(attributes=event['Event']['Attribute'])
+        source = Source(name=event['Event']['info'] + "_Src", facts=facts)
+        await self.data_svc.store(source)
+
+        operation = Operation(adversary=adversary.display, name=event['Event']['info'] + "_Op", source=source)
         await self.data_svc.store(operation)
         return operation
 
@@ -132,6 +140,36 @@ class MispService:
 
         ordered.sort()
         return ordered
+
+    def get_facts(self, attributes):
+        facts = []
+        for attribute in attributes:
+            try:
+                if len(attribute['Tag']) > 0:
+                    for tag in attribute['Tag']:
+                        if "fact-source" in tag['name']:
+                            if '|' in str(attribute['type']) and '|' in attribute['value']:
+                                att_types = str(attribute['type']).split("|")
+                                att_values = str(attribute['value']).split("|")
+
+                                if len(att_types) == len(att_values):
+                                    for i in range(0, len(att_types)):
+                                        fact_name = str(att_types[i]) + '.' + str(attribute['id'])
+                                        fact = Fact(trait=fact_name, value=att_values[i])
+                                        facts.append(fact)
+                                else:
+                                    fact_name = str(attribute['type']) + '.' + str(attribute['id'])
+                                    fact = Fact(trait=fact_name, value=attribute['value'])
+                                    facts.append(fact)
+                            
+                            else:
+                                fact_name = str(attribute['type']) + '.' + str(attribute['id'])
+                                fact = Fact(trait=fact_name, value=attribute['value'])
+                                facts.append(fact)
+            except Exception:
+                pass
+
+        return facts
 
     async def analyze_galaxies(self, event, platform, abilities):
         galaxy = event["Event"]["Galaxy"]
