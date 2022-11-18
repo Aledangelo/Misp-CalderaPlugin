@@ -31,12 +31,13 @@ class MispService:
 
     
 
-    async def save_operation(self, event, adv_description, abilities):
+    async def save_operation(self, event, adv_description, abilities, platform):
         self.log.info("[Misp Plugin] Saving Adversary Profile...")
         adversary = Adversary(name=event['Event']['info'] + "_Adv", description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
 
-        facts = self.get_facts(attributes=event['Event']['Attribute'])
+        self.log.info("Analyzing facts...")
+        facts = await self.get_facts(attributes=event['Event']['Attribute'], ability_ids=abilities, platform=platform)
         source = Source(name=event['Event']['info'] + "_Src", facts=facts)
         await self.data_svc.store(source)
 
@@ -141,13 +142,70 @@ class MispService:
         ordered.sort()
         return ordered
 
-    def get_facts(self, attributes):
+    def is_ability(self, ability, abilities):
+        for a in abilities:
+            if str(a) == str(ability):
+                self.log.info("True")
+                return True
+        self.log.info("False")
+        return False
+
+    async def get_facts(self, attributes, ability_ids, platform):
         facts = []
+        abilities = await self.data_svc.locate("abilities")
         for attribute in attributes:
             try:
                 if len(attribute['Tag']) > 0:
                     for tag in attribute['Tag']:
                         if "fact-source" in tag['name']:
+                            att_value = attribute['value']
+                            self.log.info(f"Attribute value: {att_value}")
+                            for galaxy in attribute['Galaxy']:
+                                for cluster in galaxy['GalaxyCluster']:
+                                    if cluster['type'] == "mitre-attack-pattern":
+                                        ability_to_check = str(cluster['value']).split("-")
+                                        self.log.info(f"Ability: {ability_to_check}")
+                                        i = 1
+                                        while True:
+                                            try:
+                                                t_id = str(ability_to_check[i]).replace(" ", "")
+                                            except Exception:
+                                                return
+                                            if re.search("^T[1234567890]+\.*[1234567890]*", t_id):
+                                                break
+                                            i += 1
+                                        break
+                            
+                            self.log.info(f"Finding abilities... Searching for: {t_id}")
+                            for ability in abilities:
+                                ab = ability.display
+                                if str(ab['technique_id']) in str(t_id) and self.is_ability(ability=ab['ability_id'], abilities=ability_ids):
+                                    self.log.info(f"Ability found: {ab['technique_id']}")
+                                    if self.checkPlatform(ability=ab, platform=platform):
+                                        for executor in ab['executors']:
+                                            self.log.info(f"Ability commmand: {executor['command']}")
+                                            if re.search("#{.+}", str(executor['command'])):
+                                                temp_command = str(executor['command']).split("#{")
+                                                # self.log.info(f"Splitted: {temp_command}")
+                                                att_value_split = str(att_value).split("|")
+                                                value_split_len = len(att_value_split)
+                                                count_len = 0
+                                                perv_fact_name = ""
+                                                for i in range(0, len(temp_command)):
+                                                    try:
+                                                        if re.search("}", str(temp_command[i + 1])):
+                                                            t = str(temp_command[i + 1]).split("}")
+                                                            fact_name = t[0]
+                                                            if str(fact_name) != str(perv_fact_name):
+                                                                fact = Fact(trait=fact_name, value=att_value_split[count_len])
+                                                                facts.append(fact)
+                                                                perv_fact_name = fact_name
+                                                                if count_len + 1 < value_split_len:
+                                                                    count_len += 1
+                                                    except Exception:
+                                                        pass
+
+                            '''
                             if '|' in str(attribute['type']) and '|' in attribute['value']:
                                 att_types = str(attribute['type']).split("|")
                                 att_values = str(attribute['value']).split("|")
@@ -166,6 +224,7 @@ class MispService:
                                 fact_name = str(attribute['type']) + '.' + str(attribute['id'])
                                 fact = Fact(trait=fact_name, value=attribute['value'])
                                 facts.append(fact)
+                            '''
             except Exception:
                 pass
 
@@ -174,7 +233,6 @@ class MispService:
     async def analyze_galaxies(self, event, platform, abilities):
         galaxy = event["Event"]["Galaxy"]
         ordered = self.order_ability(event['Event']['Attribute'])
-        self.log.info(ordered)
 
         my_abilities = []
         added_default = []
