@@ -36,7 +36,6 @@ class MispService:
         adversary = Adversary(name=event['Event']['info'] + "_Adv", description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
 
-        self.log.info("Analyzing facts...")
         facts = await self.get_facts(attributes=event['Event']['Attribute'], ability_ids=abilities, platform=platform)
         source = Source(name=event['Event']['info'] + "_Src", facts=facts)
         await self.data_svc.store(source)
@@ -56,46 +55,43 @@ class MispService:
         def_ab = open("plugins/misp/conf/default_abilities.json", "r")
         default_abilities = json.load(def_ab)
 
+        filtered_by_platform = []
+        
+
         multi = False
         if len(tactics) > 1:
             multi = True
 
-        gFind = False
-        for tactic in tactics:
-            for ab in abilities:
-                ability = ab.display
-                if str(ability["technique_id"]) == str(technique_id):
-                    if str(ability["tactic"]) == str(tactic):
-                        if self.checkPlatform(ability=ability, platform=platform):
-                            my_abilities.append(ability)
-                            gFind = True
-                            break
+        for ab in abilities:
+            ability = ab.display
+            if str(ability['technique_id']) in str(technique_id) and self.checkPlatform(ability=ability, platform=platform):
+                filtered_by_platform.append(ability)
 
-        if not gFind and multi:
-            for ab in abilities:
-                ability = ab.display
-                if str(ability["technique_id"]) == str(technique_id):
-                    if str(ability["tactic"]) == "multiple":
-                        if self.checkPlatform(ability=ability, platform=platform):
-                            my_abilities.append(ability)
-                            gFind = True
-                            break
+        filtered_by_tactic = []
+        for ok in filtered_by_platform:
+            if ok['tactic'] in tactics:
+                filtered_by_tactic.append(ok)
 
-        if not gFind and '.' in str(technique_id):
-            temp = str(technique_id).split(".")
-            new_id = temp[0]
-            for tactic in tactics:
-                for ab in abilities:
-                    ability = ab.display
-                    if str(ability["technique_id"]) == new_id:
-                        if str(ability["tactic"]) == str(tactic):
-                            if self.checkPlatform(ability=ability, platform=platform):
-                                my_abilities.append(ability)
-                                gFind = True
-                                break
+        if len(filtered_by_tactic) == 0 and multi:
+            for ok in filtered_by_platform:
+                if ok['tactic'] == "multiple":
+                    filtered_by_tactic.append(ok)
 
+        filtered_by_id = []
+        for t in filtered_by_tactic:
+            if str(t['technique_id']) == str(technique_id):
+                filtered_by_id.append(t)
 
-        if not gFind:
+        if len(filtered_by_id) == 0  and '.' in str(technique_id):
+            for t in filtered_by_tactic:
+                splitted_id = str(technique_id).split(".")
+                tech_id = splitted_id[0]
+                if str(t['technique_id']) == str(tech_id):
+                    filtered_by_id.append(t)
+                
+        if len(filtered_by_id) > 0:
+            my_abilities.append(filtered_by_id[0])
+        else:
             added = False
             for tactic in tactics:
                 if str(tactic) in added_default:
@@ -106,11 +102,10 @@ class MispService:
                         if str(ability["name"]) == default:
                             if self.checkPlatform(ability=ability, platform=platform):
                                 my_abilities.append(ability)
-                                gFind = True
                                 break
                 if added:
                     added_default.append(str(tactic))
-
+        
         return my_abilities, added_default
 
     def order_ability(self, attributes):
@@ -145,9 +140,7 @@ class MispService:
     def is_ability(self, ability, abilities):
         for a in abilities:
             if str(a) == str(ability):
-                self.log.info("True")
                 return True
-        self.log.info("False")
         return False
 
     async def get_facts(self, attributes, ability_ids, platform):
@@ -159,12 +152,10 @@ class MispService:
                     for tag in attribute['Tag']:
                         if "fact-source" in tag['name']:
                             att_value = attribute['value']
-                            self.log.info(f"Attribute value: {att_value}")
                             for galaxy in attribute['Galaxy']:
                                 for cluster in galaxy['GalaxyCluster']:
                                     if cluster['type'] == "mitre-attack-pattern":
                                         ability_to_check = str(cluster['value']).split("-")
-                                        self.log.info(f"Ability: {ability_to_check}")
                                         i = 1
                                         while True:
                                             try:
@@ -176,17 +167,13 @@ class MispService:
                                             i += 1
                                         break
                             
-                            self.log.info(f"Finding abilities... Searching for: {t_id}")
                             for ability in abilities:
                                 ab = ability.display
                                 if str(ab['technique_id']) in str(t_id) and self.is_ability(ability=ab['ability_id'], abilities=ability_ids):
-                                    self.log.info(f"Ability found: {ab['technique_id']}")
                                     if self.checkPlatform(ability=ab, platform=platform):
                                         for executor in ab['executors']:
-                                            self.log.info(f"Ability commmand: {executor['command']}")
                                             if re.search("#{.+}", str(executor['command'])):
                                                 temp_command = str(executor['command']).split("#{")
-                                                # self.log.info(f"Splitted: {temp_command}")
                                                 att_value_split = str(att_value).split("|")
                                                 value_split_len = len(att_value_split)
                                                 count_len = 0
@@ -204,27 +191,6 @@ class MispService:
                                                                     count_len += 1
                                                     except Exception:
                                                         pass
-
-                            '''
-                            if '|' in str(attribute['type']) and '|' in attribute['value']:
-                                att_types = str(attribute['type']).split("|")
-                                att_values = str(attribute['value']).split("|")
-
-                                if len(att_types) == len(att_values):
-                                    for i in range(0, len(att_types)):
-                                        fact_name = str(att_types[i]) + '.' + str(attribute['id'])
-                                        fact = Fact(trait=fact_name, value=att_values[i])
-                                        facts.append(fact)
-                                else:
-                                    fact_name = str(attribute['type']) + '.' + str(attribute['id'])
-                                    fact = Fact(trait=fact_name, value=attribute['value'])
-                                    facts.append(fact)
-                            
-                            else:
-                                fact_name = str(attribute['type']) + '.' + str(attribute['id'])
-                                fact = Fact(trait=fact_name, value=attribute['value'])
-                                facts.append(fact)
-                            '''
             except Exception:
                 pass
 

@@ -1,4 +1,5 @@
 plugin-init.py
+old_functions.py
 *.pyc
 *.crt
 *.pyd
