@@ -83,9 +83,9 @@ class MispService:
                 filtered_by_id.append(t)
 
         if len(filtered_by_id) == 0  and '.' in str(technique_id):
+            splitted_id = str(technique_id).split(".")
+            tech_id = splitted_id[0]
             for t in filtered_by_tactic:
-                splitted_id = str(technique_id).split(".")
-                tech_id = splitted_id[0]
                 if str(t['technique_id']) == str(tech_id):
                     filtered_by_id.append(t)
                 
