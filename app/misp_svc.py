@@ -101,6 +101,7 @@ class MispService:
                         ability = ab.display
                         if str(ability["name"]) == default:
                             if self.checkPlatform(ability=ability, platform=platform):
+                                added = True
                                 my_abilities.append(ability)
                                 break
                 if added:
