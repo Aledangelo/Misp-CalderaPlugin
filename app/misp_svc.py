@@ -36,10 +36,12 @@ class MispService:
         adversary = Adversary(name=event['Event']['info'] + "_Adv", description=adv_description, atomic_ordering=abilities)
         await self.data_svc.store(adversary)
 
+        self.log.info("[Misp Plugin] Saving Fact Sources...")
         facts = await self.get_facts(attributes=event['Event']['Attribute'], ability_ids=abilities, platform=platform)
         source = Source(name=event['Event']['info'] + "_Src", facts=facts)
         await self.data_svc.store(source)
 
+        self.log.info("[Misp Plugin] Saving Operation...")
         operation = Operation(adversary=adversary.display, name=event['Event']['info'] + "_Op", source=source)
         await self.data_svc.store(operation)
         return operation
@@ -54,8 +56,6 @@ class MispService:
     def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default, out, in_fact, in_ref):
         def_ab = open("plugins/misp/conf/default_abilities.json", "r")
         default_abilities = json.load(def_ab)
-
-        self.log.info(f"STARTING FINDABILITY FUNCTION WITH ID: {technique_id}")
 
         filtered_by_platform = []
         
@@ -112,7 +112,6 @@ class MispService:
         
         if len(filtered_by_id) > 0:
             my_abilities.append(filtered_by_id[0])
-            self.log.info(f"SAVING {filtered_by_id[0]['name']}")
             if out:
                 return my_abilities, added_default, str(filtered_by_id[0]['executors'][0]['parsers'][0]['parserconfigs'][0]['source'])
         else:
@@ -126,7 +125,6 @@ class MispService:
                         if str(ability["name"]) == default:
                             if self.checkPlatform(ability=ability, platform=platform):
                                 added = True
-                                self.log.info(f"SAVING {ability['name']}")
                                 my_abilities.append(ability)
                                 break
                 if added:
@@ -263,8 +261,6 @@ class MispService:
                             in_id.append((in_ref, t_id, tactics))
                     else:
                         my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=False, in_ref=None)
-                        for m in my_abilities:
-                            self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
                 break
 
         out_id.sort()
@@ -274,45 +270,49 @@ class MispService:
         saved_output = []
 
         while len(out_id) > 0 and len(in_id) > 0:
-            self.log.info(f"OUT: {str(out_id)}")
-            self.log.info(f"IN: {str(in_id)}")
+            out_to_remove = []
+            in_to_remove = []
             for o in out_id:
-                self.log.info(f"OUT LOOP WITH: {o[1]}")
                 is_input = False
                 for k in in_id:
                     if o[1] == k[1]:
                         is_input = True
                 if is_input == False:
-                    self.log.info(f"{o[0]} IN OUT AND NOT IN INTPUT")
                     my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=False, in_ref=None)
-                    for m in my_abilities:
-                        self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
                     saved_output.append((o[0], source_out))
-                    self.log.info(f"SAVED OUTPUT: {str(saved_output)}")
-                    out_id.remove(o)
+                    # out_id.remove(o)
+                    out_to_remove.append(o)
                 else:
-                    self.log.info(f"{o[0]} IN OUT AND IN INPUT")
                     for s in saved_output:
                         for inp in in_id:
                             if s[0] == inp[0]:
                                 my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=True, in_ref=s[1])
-                                for m in my_abilities:
-                                    self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
                                 saved_output.append((o[0], source_out))
-                                out_id.remove(o)
-                                self.log.info(f"SAVED OUTPUT: {str(saved_output)}")
+                                # out_id.remove(o)
                                 saved_output.remove(s)
-                                in_id.remove(inp)
+                                out_to_remove.append(o)
+                                # in_id.remove(inp)
+                                in_to_remove.append(inp)
+                                break
 
+            for otr in out_to_remove:
+                out_id.remove(otr)
 
+            for itr in in_to_remove:
+                in_id.remove(itr)
+
+            in_to_remove = []
             for inp in in_id:
-                self.log.info(f"IN LOOP WITH: {inp[1]}")
                 for s in saved_output:
                     if s[0] == inp[0]:
                         my_abilities, added_default, not_used = self.findAbility(technique_id=inp[1], tactics=inp[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False,  in_fact=True, in_ref=s[1])
                         saved_output.remove(s)
-                        in_id.remove(inp)
+                        # in_id.remove(inp)
+                        in_to_remove.append(inp)
+                        break
 
+            for it in in_to_remove:
+                in_id.remove(it)
 
         ordered_abilities = []
         for o in ordered:

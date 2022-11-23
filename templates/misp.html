@@ -78,6 +78,7 @@ function alpineMisp() {
                 document.getElementById("adversary_id").innerHTML = "Adversary ID: " + response['adversary']['adversary_id'];
                 document.getElementById("adversary_name").innerHTML = "Adversary Name: " + response['adversary']['name']
             }).catch((error) => {
+                document.getElementById("res").innerHTML = "Something  went wrong, see logs for more information"
                 toast('Error loading page', false);
                 console.error(error);
             })
