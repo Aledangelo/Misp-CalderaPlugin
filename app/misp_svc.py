@@ -51,13 +51,14 @@ class MispService:
 
         return False    
 
-    def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default):
+    def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default, out, in_fact, in_ref):
         def_ab = open("plugins/misp/conf/default_abilities.json", "r")
         default_abilities = json.load(def_ab)
 
+        self.log.info(f"STARTING FINDABILITY FUNCTION WITH ID: {technique_id}")
+
         filtered_by_platform = []
         
-
         multi = False
         if len(tactics) > 1:
             multi = True
@@ -77,8 +78,28 @@ class MispService:
                 if ok['tactic'] == "multiple":
                     filtered_by_tactic.append(ok)
 
+        filtered_by_parsers = []
+        if out:
+            for tac in filtered_by_tactic:
+                for executor in tac['executors']:
+                    if len(executor['parsers']) > 0:
+                        filtered_by_parsers.append(tac)
+                        break
+        else:
+            filtered_by_parsers = filtered_by_tactic
+
+        filtered_by_command = []
+        if in_fact:
+            for p in filtered_by_parsers:
+                for executor in p['executors']:
+                    if "#{" + str(in_ref) + "}" in executor['command']:
+                        filtered_by_command.append(p)
+                        break
+        else:
+            filtered_by_command = filtered_by_parsers
+
         filtered_by_id = []
-        for t in filtered_by_tactic:
+        for t in filtered_by_command:
             if str(t['technique_id']) == str(technique_id):
                 filtered_by_id.append(t)
 
@@ -88,9 +109,12 @@ class MispService:
             for t in filtered_by_tactic:
                 if str(t['technique_id']) == str(tech_id):
                     filtered_by_id.append(t)
-                
+        
         if len(filtered_by_id) > 0:
             my_abilities.append(filtered_by_id[0])
+            self.log.info(f"SAVING {filtered_by_id[0]['name']}")
+            if out:
+                return my_abilities, added_default, str(filtered_by_id[0]['executors'][0]['parsers'][0]['parserconfigs'][0]['source'])
         else:
             added = False
             for tactic in tactics:
@@ -102,12 +126,13 @@ class MispService:
                         if str(ability["name"]) == default:
                             if self.checkPlatform(ability=ability, platform=platform):
                                 added = True
+                                self.log.info(f"SAVING {ability['name']}")
                                 my_abilities.append(ability)
                                 break
                 if added:
                     added_default.append(str(tactic))
         
-        return my_abilities, added_default
+        return my_abilities, added_default, ""
 
     def order_ability(self, attributes):
         ordered = []
@@ -203,6 +228,8 @@ class MispService:
 
         my_abilities = []
         added_default = []
+        out_id = []
+        in_id = []
 
         for g in galaxy:
             if g["type"] == "mitre-attack-pattern":
@@ -226,9 +253,66 @@ class MispService:
                     for k_chain in kill_chain:
                         k = str(k_chain).split(":")
                         tactics.append(str(k[1]).replace(" ", ""))
-                    
-                    my_abilities, added_default = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default)
+
+                    check_out, out_ref = self.is_out(attributes=event['Event']['Attribute'], technique=t_id)
+                    check_in, in_ref = self.is_in(attributes=event['Event']['Attribute'], technique=t_id)
+                    if check_out or check_in:
+                        if check_out:
+                            out_id.append((out_ref, t_id, tactics))
+                        if check_in:
+                            in_id.append((in_ref, t_id, tactics))
+                    else:
+                        my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=False, in_ref=None)
+                        for m in my_abilities:
+                            self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
                 break
+
+        out_id.sort()
+        in_id.sort()
+        
+
+        saved_output = []
+
+        while len(out_id) > 0 and len(in_id) > 0:
+            self.log.info(f"OUT: {str(out_id)}")
+            self.log.info(f"IN: {str(in_id)}")
+            for o in out_id:
+                self.log.info(f"OUT LOOP WITH: {o[1]}")
+                is_input = False
+                for k in in_id:
+                    if o[1] == k[1]:
+                        is_input = True
+                if is_input == False:
+                    self.log.info(f"{o[0]} IN OUT AND NOT IN INTPUT")
+                    my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=False, in_ref=None)
+                    for m in my_abilities:
+                        self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
+                    saved_output.append((o[0], source_out))
+                    self.log.info(f"SAVED OUTPUT: {str(saved_output)}")
+                    out_id.remove(o)
+                else:
+                    self.log.info(f"{o[0]} IN OUT AND IN INPUT")
+                    for s in saved_output:
+                        for inp in in_id:
+                            if s[0] == inp[0]:
+                                my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=True, in_ref=s[1])
+                                for m in my_abilities:
+                                    self.log.info(f"ABILITIES' ARRAY: {str(m['name'])}")
+                                saved_output.append((o[0], source_out))
+                                out_id.remove(o)
+                                self.log.info(f"SAVED OUTPUT: {str(saved_output)}")
+                                saved_output.remove(s)
+                                in_id.remove(inp)
+
+
+            for inp in in_id:
+                self.log.info(f"IN LOOP WITH: {inp[1]}")
+                for s in saved_output:
+                    if s[0] == inp[0]:
+                        my_abilities, added_default, not_used = self.findAbility(technique_id=inp[1], tactics=inp[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False,  in_fact=True, in_ref=s[1])
+                        saved_output.remove(s)
+                        in_id.remove(inp)
+
 
         ordered_abilities = []
         for o in ordered:
@@ -242,3 +326,39 @@ class MispService:
                 ordered_abilities.append(a["ability_id"])
 
         return ordered_abilities
+
+    def is_out(self, attributes, technique):
+        for attribute in attributes:
+            try:
+                if len(attribute['Tag']) > 0:
+                    for tag in attribute['Tag']:
+                        if "out-to-fact" in tag['name']:
+                            split_name = str(tag['name']).split(":")
+                            out_id = split_name[1]
+                            for galaxy in attribute['Galaxy']:
+                                if galaxy['type'] == "mitre-attack-pattern":
+                                    for cluster in galaxy['GalaxyCluster']:
+                                        if cluster['type'] == "mitre-attack-pattern":
+                                            if str(technique) in str(cluster['value']):
+                                                return True, out_id
+            except Exception:
+                pass
+        return False, ""
+
+    def is_in(self, attributes, technique):
+        for attribute in attributes:
+            try:
+                if len(attribute['Tag']) > 0:
+                    for tag in attribute['Tag']:
+                        if "fact-to-in" in str(tag['name']):
+                            split_name = str(tag['name']).split(":")
+                            in_id = split_name[1]
+                            for galaxy in attribute['Galaxy']:
+                                if galaxy['type'] == "mitre-attack-pattern":
+                                    for cluster in galaxy['GalaxyCluster']:
+                                        if cluster['type'] == "mitre-attack-pattern":
+                                            if str(technique) in str(cluster['value']):
+                                                return True, in_id
+            except Exception:
+                pass
+        return False, ""
