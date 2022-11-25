@@ -134,6 +134,8 @@ class MispService:
 
     def order_ability(self, attributes):
         ordered = []
+        preliminary = []
+        post = []
         for attribute in attributes:
             try:
                 if len(attribute['Tag']) > 0:
@@ -150,16 +152,37 @@ class MispService:
                                             try:
                                                 t_id = str(v[i]).replace(" ", "")
                                             except Exception as e:
+                                                self.log.error(e)
                                                 quit(1)
                                             if re.search("^T[1234567890]+\.*[1234567890]*", t_id):
                                                 break
                                             i += 1
                                         ordered.append((int(n), t_id))
+                        elif tag['name'] == "preliminary" or tag['name'] == "post":
+                            for galaxy in attribute['Galaxy']:
+                                for cluster in galaxy['GalaxyCluster']:
+                                    if cluster ['type'] == "mitre-attack-pattern":
+                                        val = str(cluster['value']).split("-")
+                                        index = 1
+                                        while True:
+                                            try:
+                                                tech_id = str(val[1]).replace(" ", "")
+                                            except Exception as e:
+                                                self.log.error(e)
+                                                quit(1)
+                                            if re.search("^T[1234567890]+\.*[1234567890]*", tech_id):
+                                                break
+                                            index += 1
+                                        if tag['name'] == "preliminary":
+                                            preliminary.append(tech_id)
+                                        elif tag['name'] == "post":
+                                            post.append(tech_id)
             except Exception:
                 pass
 
         ordered.sort()
-        return ordered
+
+        return ordered, preliminary, post
 
     def is_ability(self, ability, abilities):
         for a in abilities:
@@ -222,7 +245,7 @@ class MispService:
 
     async def analyze_galaxies(self, event, platform, abilities):
         galaxy = event["Event"]["Galaxy"]
-        ordered = self.order_ability(event['Event']['Attribute'])
+        ordered, preliminary, post = self.order_ability(event['Event']['Attribute'])
 
         my_abilities = []
         added_default = []
@@ -280,7 +303,6 @@ class MispService:
                 if is_input == False:
                     my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=False, in_ref=None)
                     saved_output.append((o[0], source_out))
-                    # out_id.remove(o)
                     out_to_remove.append(o)
                 else:
                     for s in saved_output:
@@ -288,10 +310,8 @@ class MispService:
                             if s[0] == inp[0]:
                                 my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=True, in_ref=s[1])
                                 saved_output.append((o[0], source_out))
-                                # out_id.remove(o)
                                 saved_output.remove(s)
                                 out_to_remove.append(o)
-                                # in_id.remove(inp)
                                 in_to_remove.append(inp)
                                 break
 
@@ -307,7 +327,6 @@ class MispService:
                     if s[0] == inp[0]:
                         my_abilities, added_default, not_used = self.findAbility(technique_id=inp[1], tactics=inp[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False,  in_fact=True, in_ref=s[1])
                         saved_output.remove(s)
-                        # in_id.remove(inp)
                         in_to_remove.append(inp)
                         break
 
@@ -315,10 +334,22 @@ class MispService:
                 in_id.remove(it)
 
         ordered_abilities = []
+        for pre in preliminary:
+            for a in my_abilities:
+                if str(a['technique_id']) in str(pre):
+                    ordered_abilities.append(a['ability_id'])
+                    my_abilities.remove(a)
+
         for o in ordered:
             for a in my_abilities:
                 if str(a['technique_id']) in str(o[1]):
                     ordered_abilities.append(a["ability_id"])
+                    my_abilities.remove(a)
+
+        for p in post:
+            for a in my_abilities:
+                if str(a['technique_id']) in str(p):
+                    ordered_abilities.append(a['ability_id'])
                     my_abilities.remove(a)
 
         if len(my_abilities) > 0:
