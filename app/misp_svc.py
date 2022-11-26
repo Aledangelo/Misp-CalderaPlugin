@@ -54,9 +54,6 @@ class MispService:
         return False    
 
     def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default, out, in_fact, in_ref):
-        def_ab = open("plugins/misp/conf/default_abilities.json", "r")
-        default_abilities = json.load(def_ab)
-
         filtered_by_platform = []
         
         multi = False
@@ -115,6 +112,8 @@ class MispService:
             if out:
                 return my_abilities, added_default, str(filtered_by_id[0]['executors'][0]['parsers'][0]['parserconfigs'][0]['source'])
         else:
+            def_ab = open("plugins/misp/conf/default_abilities.json", "r")
+            default_abilities = json.load(def_ab)
             added = False
             for tactic in tactics:
                 if str(tactic) in added_default:
