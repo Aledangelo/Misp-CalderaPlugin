@@ -38,22 +38,21 @@ class MispService:
 
         self.log.info("[Misp Plugin] Saving Fact Sources...")
         facts = await self.get_facts(attributes=event['Event']['Attribute'], ability_ids=abilities, platform=platform)
-        if len(facts) == 0:
-            sources = await self.data_svc.locate('sources')
-            for s in sources:
-                if s.name == "basic":
-                    source = s
-        else:
-            source = Source(name=event['Event']['info'] + "_Src", facts=facts)
-            await self.data_svc.store(source)
+        sources = await self.data_svc.locate("sources")
+        for source in sources:
+            for fact in source.facts:
+                facts.append(fact)
+
+        src = Source(name=event['Event']['info'] + "_Src", facts=facts)
+        await self.data_svc.store(src)
 
         planners = await self.data_svc.locate('planners')
         for p in planners:
             if p.name == "atomic":
                 planner = p
-
+        
         self.log.info("[Misp Plugin] Saving Operation...")
-        operation = Operation(adversary=adversary.display, name=event['Event']['info'] + "_Op", source=source, planner=planner)
+        operation = Operation(adversary=adversary.display, name=event['Event']['info'] + "_Op", source=src, planner=planner)
         await self.data_svc.store(operation)
         return operation
 
