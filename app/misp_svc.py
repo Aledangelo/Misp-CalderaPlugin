@@ -97,11 +97,18 @@ class MispService:
 
         filtered_by_command = []
         if in_fact:
-            for p in filtered_by_parsers:
-                for executor in p['executors']:
-                    if "#{" + str(in_ref) + "}" in executor['command']:
-                        filtered_by_command.append(p)
-                        break
+            if in_ref == "":
+                for p in filtered_by_parsers:
+                    for executor in p['executors']:
+                        if re.search("#{.+}", str(executor['command'])):
+                            filtered_by_command.append(p)
+                            break
+            else:
+                for p in filtered_by_parsers:
+                    for executor in p['executors']:
+                        if "#{" + str(in_ref) + "}" in executor['command']:
+                            filtered_by_command.append(p)
+                            break
         else:
             filtered_by_command = filtered_by_parsers
 
@@ -223,6 +230,7 @@ class MispService:
                                             i += 1
                                         break
                             
+                            c = 0
                             for ability in abilities:
                                 ab = ability.display
                                 if str(ab['technique_id']) in str(t_id) and self.is_ability(ability=ab['ability_id'], abilities=ability_ids):
@@ -247,6 +255,10 @@ class MispService:
                                                                     count_len += 1
                                                     except Exception:
                                                         pass
+                                            else:
+                                                fact = Fact(trait="Fact-" + str(c), value=att_value)
+                                                c += 1
+                                                facts.append(fact)
             except Exception:
                 pass
 
@@ -286,11 +298,14 @@ class MispService:
 
                     check_out, out_ref = self.is_out(attributes=event['Event']['Attribute'], technique=t_id)
                     check_in, in_ref = self.is_in(attributes=event['Event']['Attribute'], technique=t_id)
+                    fact_check = self.has_fact(attributes=event['Event']['Attribute'], technique=t_id)
                     if check_out or check_in:
                         if check_out:
                             out_id.append((out_ref, t_id, tactics))
                         if check_in:
                             in_id.append((in_ref, t_id, tactics))
+                    elif fact_check:
+                        my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=True, in_ref="")
                     else:
                         my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=False, in_ref=None)
                 break
@@ -384,6 +399,22 @@ class MispService:
             except Exception:
                 pass
         return False, ""
+
+    def has_fact(self, attributes, technique):
+        for attribute in attributes:
+            try:
+                if len(attribute['Tag']) > 0:
+                    for tag in attribute['Tag']:
+                        if "fact-source" in tag['name']:
+                            for galaxy in attribute['Galaxy']:
+                                if galaxy['type'] == "mitre-attack-pattern":
+                                    for cluster in galaxy['GalaxyCluster']:
+                                        if cluster['type'] == "mitre-attack-pattern":
+                                            if str(technique) in cluster['value']:
+                                                return True
+            except Exception:
+                pass
+        return False
 
     def is_in(self, attributes, technique):
         for attribute in attributes:
