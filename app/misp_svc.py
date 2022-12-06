@@ -64,6 +64,7 @@ class MispService:
         return False    
 
     def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default, out, in_fact, in_ref):
+        self.log.info("FIND ABILITY")
         filtered_by_platform = []
         
         multi = False
@@ -97,7 +98,8 @@ class MispService:
 
         filtered_by_command = []
         if in_fact:
-            if in_ref == "":
+            self.log.info(f"In FACT for id: {technique_id}")
+            if len(in_ref) == 0:
                 for p in filtered_by_parsers:
                     for executor in p['executors']:
                         if re.search("#{.+}", str(executor['command'])):
@@ -106,9 +108,13 @@ class MispService:
             else:
                 for p in filtered_by_parsers:
                     for executor in p['executors']:
-                        if "#{" + str(in_ref) + "}" in executor['command']:
-                            filtered_by_command.append(p)
-                            break
+                        c = 0
+                        for i in in_ref:
+                            if "#{" + str(i) in executor['command']:
+                                c += 1
+                                if c == len(in_ref):
+                                    filtered_by_command.append(p)
+                                break
         else:
             filtered_by_command = filtered_by_parsers
 
@@ -305,14 +311,13 @@ class MispService:
                         if check_in:
                             in_id.append((in_ref, t_id, tactics))
                     elif fact_check:
-                        my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=True, in_ref="")
+                        my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=True, in_ref=[])
                     else:
                         my_abilities, added_default, not_used = self.findAbility(technique_id=t_id, tactics=tactics, abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False, in_fact=False, in_ref=None)
                 break
 
         out_id.sort()
         in_id.sort()
-        
 
         saved_output = []
 
@@ -331,8 +336,8 @@ class MispService:
                 else:
                     for s in saved_output:
                         for inp in in_id:
-                            if s[0] == inp[0]:
-                                my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=True, in_ref=s[1])
+                            if s[0] in inp[0]:
+                                my_abilities, added_default, source_out = self.findAbility(technique_id=o[1], tactics=o[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=True, in_fact=True, in_ref=[s[1]])
                                 saved_output.append((o[0], source_out))
                                 saved_output.remove(s)
                                 out_to_remove.append(o)
@@ -348,8 +353,8 @@ class MispService:
             in_to_remove = []
             for inp in in_id:
                 for s in saved_output:
-                    if s[0] == inp[0]:
-                        my_abilities, added_default, not_used = self.findAbility(technique_id=inp[1], tactics=inp[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False,  in_fact=True, in_ref=s[1])
+                    if s[0] in inp[0]:
+                        my_abilities, added_default, not_used = self.findAbility(technique_id=inp[1], tactics=inp[2], abilities=abilities, platform=platform, my_abilities=my_abilities, added_default=added_default, out=False,  in_fact=True, in_ref=[s[1]])
                         saved_output.remove(s)
                         in_to_remove.append(inp)
                         break
@@ -417,6 +422,8 @@ class MispService:
         return False
 
     def is_in(self, attributes, technique):
+        in_ids = []
+        find = False
         for attribute in attributes:
             try:
                 if len(attribute['Tag']) > 0:
@@ -429,7 +436,10 @@ class MispService:
                                     for cluster in galaxy['GalaxyCluster']:
                                         if cluster['type'] == "mitre-attack-pattern":
                                             if str(technique) in str(cluster['value']):
-                                                return True, in_id
+                                                in_ids.append(in_id)
+                                                find = True
+                                                self.log.info("FOUND")
+                                                
             except Exception:
                 pass
-        return False, ""
+        return find, in_ids
