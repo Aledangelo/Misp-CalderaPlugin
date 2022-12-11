@@ -64,7 +64,6 @@ class MispService:
         return False    
 
     def findAbility(self, technique_id, tactics, abilities, platform, my_abilities, added_default, out, in_fact, in_ref):
-        self.log.info("FIND ABILITY")
         filtered_by_platform = []
         
         multi = False
@@ -98,7 +97,6 @@ class MispService:
 
         filtered_by_command = []
         if in_fact:
-            self.log.info(f"In FACT for id: {technique_id}")
             if len(in_ref) == 0:
                 for p in filtered_by_parsers:
                     for executor in p['executors']:
@@ -438,7 +436,6 @@ class MispService:
                                             if str(technique) in str(cluster['value']):
                                                 in_ids.append(in_id)
                                                 find = True
-                                                self.log.info("FOUND")
                                                 
             except Exception:
                 pass
