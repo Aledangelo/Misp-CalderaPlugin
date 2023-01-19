@@ -6,7 +6,7 @@
 ## Installation
 Concise installation steps:
 ```
-git clone https://github.com/mitre/caldera.git
+git clone https://github.com/Aledangelo/Misp-CalderaPlugin.git
 mv Misp-CalderaPlugin/ caldera/plugins/misp
 ```
 Next, install the PIP requirements:
