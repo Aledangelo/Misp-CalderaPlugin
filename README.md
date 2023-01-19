@@ -1,5 +1,5 @@
 # Misp-CalderaPlugin
-[Caldera](https://duckduckgo.com/?q=caldera+mitre&t=osx&ia=web) plugin to automate the creation of an Adversary profile and an Operation, through a description in a structured format provided via the [MISP](https://www.misp-project.org) platform.
+[Caldera](https://duckduckgo.com/?q=caldera+mitre&t=osx&ia=web) v4.0.0 plugin to automate the creation of an Adversary profile and an Operation, through a description in a structured format provided via the [MISP](https://www.misp-project.org) platform.
 
 ![alt text](https://raw.githubusercontent.com/Aledangelo/Misp-CalderaPlugin/main/img/diagram.png)
 
