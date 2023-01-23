@@ -3,6 +3,19 @@
 
 ![alt text](https://raw.githubusercontent.com/Aledangelo/Misp-CalderaPlugin/main/img/diagram.png)
 
+# Prerequisites
+To use the tool you need to install:
+* Python 3
+* Caldera
+* MISP
+
+You can do it through these commands
+```
+apt update && apt install python3
+git clone https://github.com/mitre/caldera.git
+git clone https://github.com/MISP/MISP.git
+```
+
 ## Installation
 Concise installation steps:
 ```
