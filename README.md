@@ -6,12 +6,14 @@
 # Prerequisites
 To use the tool you need to install:
 * Python 3
+* Pip
 * Caldera
 * MISP
 
 You can do it through these commands
 ```
 apt update && apt install python3
+apt install python3-pip
 git clone https://github.com/mitre/caldera.git
 git clone https://github.com/MISP/MISP.git
 ```
